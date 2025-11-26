@@ -4,7 +4,7 @@
 
 1.  **Navigate to the demo folder**:
     ```bash
-    cd "d:\EPF COURSE\Engineering Project\codebase\demo-v0.1"
+    cd "...demo-v0.1"
     ```
 
 2.  **Install Dependencies**:
