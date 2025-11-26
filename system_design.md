@@ -27,7 +27,7 @@ graph TD
     end
 
     subgraph "Presentation"
-        Dash[Dashboard (Power BI / Web)]
+        Dash["Dashboard (Power BI / Web)"]
         Rep[Reports]
     end
 

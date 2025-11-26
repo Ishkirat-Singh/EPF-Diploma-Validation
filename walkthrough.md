@@ -22,8 +22,11 @@
 ### Data Flow Diagram
 ![Data Flow Diagram](data_flow_diagram.png)
 
-### MVP Dashboard Mockup
-![MVP Dashboard Mockup](mvp_dashboard_mockup.png)
+### Student Dashboard Mockup
+![Student Dashboard Mockup](student_dashboard_mockup.png)
+
+### Admin Dashboard Mockup
+![Admin Dashboard Mockup](admin_dashboard_mockup.png)
 
 ## Features
 
