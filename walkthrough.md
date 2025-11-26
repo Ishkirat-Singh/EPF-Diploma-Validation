@@ -2,9 +2,9 @@
 
 ## How to Run the Demo
 
-1.  **Navigate to the codebase folder**:
+1.  **Navigate to the demo folder**:
     ```bash
-    cd "d:\EPF COURSE\Engineering Project\codebase"
+    cd "d:\EPF COURSE\Engineering Project\codebase\demo-v0.1"
     ```
 
 2.  **Install Dependencies**:
@@ -20,13 +20,13 @@
 ## Visual Assets
 
 ### Data Flow Diagram
-![Data Flow Diagram](data_flow_diagram.png)
+![Data Flow Diagram](mockups/data_flow_diagram.png)
 
 ### Student Dashboard Mockup
-![Student Dashboard Mockup](student_dashboard_mockup.png)
+![Student Dashboard Mockup](mockups/student_dashboard_mockup.png)
 
 ### Admin Dashboard Mockup
-![Admin Dashboard Mockup](admin_dashboard_mockup.png)
+![Admin Dashboard Mockup](mockups/admin_dashboard_mockup.png)
 
 ## Features
 
