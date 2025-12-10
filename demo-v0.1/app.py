@@ -1,146 +1,225 @@
 import streamlit as st
 import pandas as pd
 import random
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
 
 # Page Configuration
 st.set_page_config(
-    page_title="EPF Diploma Validation Dashboard",
+    page_title="EPF Validation Dashboard",
     page_icon="🎓",
     layout="wide"
 )
 
-# --- Mock Data Generation ---
+# --- Mock Data Generation (IT Schema View) ---
 def generate_mock_data():
     students = []
-    for i in range(1, 21):
+    majors = ["Généraliste", "Numérique", "Santé", "Aéronautique", "Structure & Matériaux"]
+    
+    for i in range(1, 26):
         student_id = f"EPF2025-{100+i}"
-        name = f"Student {i}"
-        program = random.choice(["Généraliste", "Filière Numérique", "Filière Santé"])
         
-        # Credits (Goal: 180)
-        credits_1a_3a = 60 + 60 + 60 # Assuming full success for earlier years for simplicity
-        credits_4a = random.randint(50, 60)
-        credits_5a = random.randint(20, 30)
-        total_credits = credits_1a_3a + credits_4a + credits_5a
+        # Latency Simulation (Last fetch time)
+        latency_days = random.choice([0, 1, 2, 7, 30]) 
+        last_updated = datetime.now() - timedelta(days=latency_days)
+
+        # Credits Breakdown
+        c_1a = 60
+        c_2a = 60
+        c_3a = 60
+        c_4a = random.randint(50, 60)
+        c_5a = random.randint(10, 30)
         
-        # Validation Criteria
+        # Semester details (Mocking 4A/5A semesters)
+        c_s7 = c_4a // 2 + random.randint(0, 5)
+        c_s8 = c_4a - c_s7
+        c_s9 = c_5a // 2 + random.randint(0, 2)
+        c_s10 = c_5a - c_s9
+        
         english_score = random.randint(700, 990)
-        english_valid = english_score >= 785
+        internship_choice = random.choice(["Valid", "Ongoing", "Pending"])
         
-        internship_valid = random.choice([True, False])
-        
-        competencies_valid = random.choice([True, True, False]) # Higher chance of being valid
-        
-        diploma_eligible = (total_credits >= 300) and english_valid and internship_valid and competencies_valid
-        # Note: 300 is total for 5 years (60*5). 180 is usually for the engineering cycle (last 3 years) or similar. 
-        # Let's assume 180 for the cycle ingénieur for this demo visualization.
-        cycle_credits = credits_4a + credits_5a + 60 # Mocking 3rd year as 60
-        
+        # Competencies mock
+        comp_status = random.choice(["Acquired", "In Progress", "Incomplete"])
+
         students.append({
             "Student_ID": student_id,
-            "Name": name,
-            "Program": program,
-            "Total_Credits": total_credits,
-            "Cycle_Ing_Credits": cycle_credits,
+            "Full_Name": f"Student {i}",
+            "Major": random.choice(majors),
+            "Year_Level": "5A",
+            
+            # Academic Credits
+            "Credits_1A": c_1a,
+            "Credits_2A": c_2a,
+            "Credits_3A": c_3a,
+            "Credits_4A": c_4a,
+            "Credits_5A": c_5a,
+            "Credits_S7": c_s7,
+            "Credits_S8": c_s8,
+            "Credits_S9": c_s9,
+            "Credits_S10": c_s10,
+            
+            # Language
             "English_Score": english_score,
-            "English_Valid": english_valid,
-            "Internship_Valid": internship_valid,
-            "Competencies_Valid": competencies_valid,
-            "Diploma_Eligible": diploma_eligible
+            "Voltaire_Status": random.choice(["Valid", "Exempt", "Invalid"]),
+            
+            # Internship
+            "Internship_Status": internship_choice,
+            "Internship_Start": datetime(2025, 2, 1) if internship_choice != "Pending" else None,
+            "Internship_End": datetime(2025, 8, 30) if internship_choice != "Pending" else None,
+            
+            # Competencies
+            "Competencies_Status": comp_status,
+            
+            # System Info
+            "Last_Updated": last_updated
         })
     return pd.DataFrame(students)
 
 df = generate_mock_data()
 
-# --- Sidebar ---
+# --- Visualizations ---
+
+def plot_credits_stacked(student_row):
+    """Stacked Bar Chart for Years"""
+    years = ['1A', '2A', '3A', '4A', '5A']
+    credits = [student_row[f'Credits_{y}'] for y in years]
+    
+    fig = go.Figure(data=[
+        go.Bar(name='Credits', x=years, y=credits, marker_color='#004e92')
+    ])
+    fig.update_layout(title="Academic Progress (Yearly)", yaxis_title="Credits", yaxis_range=[0, 70])
+    return fig
+
+def plot_english_gauge(score):
+    """Gauge Chart for TOEIC"""
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number+delta",
+        value = score,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        title = {'text': "TOEIC Score (Min 785)"},
+        delta = {'reference': 785},
+        gauge = {
+            'axis': {'range': [None, 990]},
+            'bar': {'color': "black"},
+            'steps': [
+                {'range': [0, 785], 'color': "lightgray"},
+                {'range': [785, 990], 'color': "#2ecc71"}],
+            'threshold': {
+                'line': {'color': "red", 'width': 4},
+                'thickness': 0.75,
+                'value': 785}}))
+    fig.update_layout(height=300)
+    return fig
+
+def plot_internship_gantt(student_row):
+    """Gantt Schema for Internship"""
+    if not student_row['Internship_Start']:
+        return None
+        
+    df_gantt = pd.DataFrame([
+        dict(Task="Internship", Start=student_row['Internship_Start'], Finish=student_row['Internship_End'], Resource="Stage")
+    ])
+    
+    fig = px.timeline(df_gantt, x_start="Start", x_end="Finish", y="Task", color="Resource", title="Internship Timeline")
+    fig.update_yaxes(visible=False)
+    fig.update_layout(height=200)
+    return fig
+
+def plot_competencies_radar(student_row):
+    """Radar Chart for Competencies"""
+    categories = ['Technical', 'Management', 'Communication', 'Innovation', 'Ethics']
+    # Mock scores for visualization
+    r = [random.randint(3, 5) for _ in range(5)]
+    
+    fig = go.Figure(data=go.Scatterpolar(
+      r=r,
+      theta=categories,
+      fill='toself',
+      name=student_row['Full_Name']
+    ))
+    fig.update_layout(
+      polar=dict(
+        radialaxis=dict(visible=True, range=[0, 5])
+      ),
+      showlegend=False,
+      title="Competency Profile"
+    )
+    return fig
+
+# --- Layout ---
+
 st.sidebar.title("🎓 EPF Validation")
-page = st.sidebar.radio("Navigation", ["Dashboard Overview", "Student Details", "Data Sources"])
+page = st.sidebar.radio("Navigation", ["Dashboard", "Individual Review", "System Hygiene"])
 
-st.sidebar.markdown("---")
-st.sidebar.info("MVP Demo v0.1")
+if page == "Dashboard":
+    st.title("📊 Global Validation Status")
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Students", len(df))
+    col2.metric("Graduation Ready", len(df[df['English_Score']>=785]), delta="Est.")
+    
+    # Latency Warning
+    stale_data = len(df[df['Last_Updated'] < datetime.now() - timedelta(days=7)])
+    col3.metric("Records > 7 Days Old", stale_data, delta_color="inverse")
+    
+    st.dataframe(df, use_container_width=True)
 
-# --- Dashboard Overview ---
-if page == "Dashboard Overview":
-    st.title("📊 Diploma Validation Dashboard")
+elif page == "Individual Review":
+    st.title("👤 Student Validation Profile")
     
-    # Metrics
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Students", len(df))
-    with col2:
-        eligible = df[df['Diploma_Eligible']].shape[0]
-        st.metric("Diploma Eligible", eligible, delta=f"{eligible/len(df)*100:.1f}%")
-    with col3:
-        pending_english = df[~df['English_Valid']].shape[0]
-        st.metric("Pending English", pending_english, delta_color="inverse")
-    with col4:
-        pending_internship = df[~df['Internship_Valid']].shape[0]
-        st.metric("Pending Internship", pending_internship, delta_color="inverse")
+    selected_id = st.selectbox("Search Student ID", df['Student_ID'])
+    student = df[df['Student_ID'] == selected_id].iloc[0]
     
-    st.markdown("### 📉 Global Progress")
-    st.bar_chart(df.set_index("Name")["Cycle_Ing_Credits"])
-    
-    st.markdown("### 📋 Student List")
-    st.dataframe(df.style.highlight_max(axis=0, color='lightgreen'), use_container_width=True)
-
-# --- Student Details ---
-elif page == "Student Details":
-    st.title("👤 Student Profile")
-    
-    selected_student_id = st.selectbox("Select Student", df['Student_ID'])
-    student = df[df['Student_ID'] == selected_student_id].iloc[0]
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.subheader(student['Name'])
-        st.text(f"ID: {student['Student_ID']}")
-        st.text(f"Program: {student['Program']}")
+    # Header
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        st.subheader(f"{student['Full_Name']} ({student['Major']})")
+    with c2:
+        # Latency Indicator
+        days_ago = (datetime.now() - student['Last_Updated']).days
+        color = "green" if days_ago < 7 else "orange"
+        st.caption(f"Last Updated: {days_ago} days ago 🕒", help="Data source latency check")
         
-        if student['Diploma_Eligible']:
-            st.success("✅ DIPLOMA ELIGIBLE")
+    st.divider()
+    
+    # Row 1: Academics & Language
+    col_a, col_b = st.columns(2)
+    
+    with col_a:
+        st.write("### 1. Academic Progress")
+        st.plotly_chart(plot_credits_stacked(student), use_container_width=True)
+        
+    with col_b:
+        st.write("### 2. Language Proficiency")
+        st.plotly_chart(plot_english_gauge(student['English_Score']), use_container_width=True)
+        st.info(f"Voltaire Status: {student['Voltaire_Status']}")
+
+    st.divider()
+    
+    # Row 2: Internship & Competencies
+    col_c, col_d = st.columns(2)
+    
+    with col_c:
+        st.write("### 3. Professional Experience")
+        gantt = plot_internship_gantt(student)
+        if gantt:
+            st.plotly_chart(gantt, use_container_width=True)
         else:
-            st.warning("⚠️ ACTION REQUIRED")
+            st.warning("No validated internship found.")
+        st.caption("Status: " + student['Internship_Status'])
             
-    with col2:
-        st.subheader("Validation Criteria")
-        
-        # Credits Progress
-        st.write(f"**Credits (Cycle Ingénieur):** {student['Cycle_Ing_Credits']} / 180")
-        st.progress(min(student['Cycle_Ing_Credits'] / 180, 1.0))
-        
-        # Status Cards
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.metric("English Score", student['English_Score'], delta="Valid" if student['English_Valid'] else "Fail")
-        with c2:
-            st.metric("Internship", "Valid" if student['Internship_Valid'] else "Pending")
-        with c3:
-            st.metric("Competencies", "Acquired" if student['Competencies_Valid'] else "In Progress")
+    with col_d:
+        st.write("### 4. Competency Matrix")
+        st.plotly_chart(plot_competencies_radar(student), use_container_width=True)
 
-    st.markdown("### 📝 Detailed Modules (Mock)")
-    # Mock detailed grades for this student
-    modules = [
-        {"Module": "Data Science", "Credits": 4, "Grade": random.randint(10, 20)},
-        {"Module": "Web Development", "Credits": 4, "Grade": random.randint(10, 20)},
-        {"Module": "Management", "Credits": 2, "Grade": random.randint(8, 18)},
-        {"Module": "English", "Credits": 2, "Grade": random.randint(12, 18)},
-        {"Module": "PFE", "Credits": 30, "Grade": "Pending" if not student['Internship_Valid'] else random.randint(14, 20)},
-    ]
-    st.table(pd.DataFrame(modules))
-
-# --- Data Sources ---
-elif page == "Data Sources":
-    st.title("🗄️ Data Sources Integration")
-    st.markdown("""
-    This system integrates data from the following sources:
+elif page == "System Hygiene":
+    st.title("🛠️ IT & Data Health")
+    st.info("This view monitors the connection with Phenix, CSM, and Language Databases.")
     
-    | Source | Type | Update Frequency | Status |
-    | :--- | :--- | :--- | :--- |
-    | **Diploma Services** | Excel / Phenix | Continuous | 🟢 Connected |
-    | **Language Services** | CSV Export | Monthly | 🟢 Connected |
-    | **Internship Services** | API / Excel | Weekly | 🟡 Partial |
-    | **International** | Excel | On Demand | 🔴 Pending |
-    """)
-    
-    st.info("Data ingestion pipelines are currently being configured.")
+    st.table(pd.DataFrame({
+        "Source": ["Phenix (ERP)", "Internship DB", "Language Svc"],
+        "Status": ["🟢 Connected", "🟢 Connected", "🟡 Latency > 5d"],
+        "Last Sync": [datetime.now(), datetime.now(), datetime.now() - timedelta(days=6)]
+    }))
